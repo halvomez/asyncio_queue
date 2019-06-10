@@ -53,12 +53,12 @@ class ProgressionController(object):
         while True:
             self.active_task = await self.queue.get()
             self.active_task['status'] = 'in_progress'
-            await self.run_progression_and_response()
+            await self.run_progression()
             self.active_task = None
             self.logger.info('task completed and removed')
             self.queue.task_done()
 
-    async def run_progression_and_response(self):
+    async def run_progression(self):
         count = 1
 
         while count <= self.active_task['N']:
