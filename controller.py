@@ -55,6 +55,7 @@ class ProgressionController(object):
             self.active_task['status'] = 'in_progress'
             await self.run_progression_and_response()
             self.active_task = None
+            self.logger.info('task completed and removed')
             self.queue.task_done()
 
     async def run_progression_and_response(self):
@@ -64,5 +65,8 @@ class ProgressionController(object):
             self.active_task['current'].append(self.active_task['N1'] +
                                                self.active_task['D'] *
                                                (count - 1))
+            if len(self.active_task['current']) == self.active_task['N']:
+                break
+
             count += 1
             await asyncio.sleep(self.active_task['interval'])
