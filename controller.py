@@ -43,8 +43,8 @@ class ProgressionController(object):
             return web.json_response('no tasks in the queue')
 
         tasks = sorted(tasks, key=lambda x: x['timestamp'])
-        for id, item in enumerate(tasks, 1):
-            item['id'] = id
+        for index, item in enumerate(tasks, 1):
+            item['id'] = index
 
         return web.json_response(tasks)
 
@@ -62,6 +62,7 @@ class ProgressionController(object):
 
         while count <= self.active_task['N']:
             self.active_task['current'].append(self.active_task['N1'] +
-                                               self.active_task['D'] * (count - 1))
+                                               self.active_task['D'] *
+                                               (count - 1))
             count += 1
             await asyncio.sleep(self.active_task['interval'])
