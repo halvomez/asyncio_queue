@@ -1,23 +1,23 @@
 import asyncio
 import logging
+from time import sleep
 from datetime import datetime
 from aiohttp import web
 
 logging.basicConfig(level='INFO')
 
+queue = asyncio.Queue()
+active_tasks = []
 
-class ProgressionController(object):
+
+class TaskController(object):
     def __init__(self, app):
         self.app = app
-        self.queue = asyncio.Queue()
-        self.active_task = None
         self.app.router.add_post('/add_task', self.add_task)
         self.app.router.add_post('/get_tasks', self.get_tasks)
 
-        self.logger = logging.getLogger('queue_worker')
-        self.logger.setLevel('INFO')
-
-    async def add_task(self, request: web.Request):
+    @staticmethod
+    async def add_task(request: web.Request):
         data = await request.json()
         task = {
             'id': '',
@@ -29,15 +29,17 @@ class ProgressionController(object):
             'current': [],
             'timestamp': str(datetime.now())
         }
-
-        self.queue.put_nowait(task)
+        queue.put_nowait(task)
 
         return web.Response(text='task sent successfully')
 
-    async def get_tasks(self, request):
-        tasks = list(self.queue._queue)
-        if self.active_task:
-            tasks.append(self.active_task)
+    @staticmethod
+    async def get_tasks(request):
+        tasks = list(queue._queue)
+
+        for task in active_tasks:
+            if task is not None:
+                tasks.append(task)
 
         if not tasks:
             return web.json_response('no tasks in the queue')
@@ -48,25 +50,35 @@ class ProgressionController(object):
 
         return web.json_response(tasks)
 
-    async def worker(self):
-        self.logger.info('queue_worker is starting')
-        while True:
-            self.active_task = await self.queue.get()
-            self.active_task['status'] = 'in_progress'
-            await self.run_progression()
-            self.active_task = None
-            self.logger.info('task completed and removed')
-            self.queue.task_done()
 
-    async def run_progression(self):
+class WorkerController(object):
+    def __init__(self, num):
+        self.num = num
+        self.logger = logging.getLogger(f'worker-{num + 1}')
+        self.logger.setLevel('INFO')
+
+    async def worker(self, loop):
+        self.logger.info(' ready to work')
+        active_tasks.append(None)
+        while True:
+            active_tasks[self.num] = await queue.get()
+            self.logger.info(' task in progress')
+            active_tasks[self.num]['status'] = 'in_progress'
+            await loop.run_in_executor(None, self.run_progression,
+                                       active_tasks[self.num])
+            active_tasks[self.num] = None
+            self.logger.info(' task completed and removed')
+            queue.task_done()
+
+    @staticmethod
+    def run_progression(task):
         count = 1
 
-        while count <= self.active_task['N']:
-            self.active_task['current'].append(self.active_task['N1'] +
-                                               self.active_task['D'] *
-                                               (count - 1))
-            if len(self.active_task['current']) == self.active_task['N']:
+        while count <= task['N']:
+            task['current'].append(task['N1'] + task['D'] * (count - 1))
+
+            if len(task['current']) == task['N']:
                 break
 
             count += 1
-            await asyncio.sleep(self.active_task['interval'])
+            sleep(task['interval'])

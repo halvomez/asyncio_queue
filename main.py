@@ -1,7 +1,5 @@
-import asyncio
 import config
-from aiohttp import web
-from controller import ProgressionController
+from controller import *
 
 
 async def index(request):
@@ -9,10 +7,15 @@ async def index(request):
 
 
 def main():
-    app = web.Application()
-    controller = ProgressionController(app)
     loop = asyncio.get_event_loop()
-    loop.create_task(controller.worker())
+    app = web.Application()
+    TaskController(app)
+    workers = []
+
+    for num in range(config.APP['workers_qty']):
+        worker = WorkerController(num)
+        workers.append(loop.create_task(worker.worker(loop)))
+
     app.router.add_get('/', index)
     web.run_app(app, port=config.APP['port'])
 
