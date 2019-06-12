@@ -9,8 +9,8 @@ async def index(request):
 async def start_background_tasks(app):
     app['workers_task'] = []
 
-    for num in range(config.APP['workers_qty']):
-        worker = WorkerController(num)
+    for num in range(1, config.APP['workers_qty'] + 1):
+        worker = Worker(num)
         app['workers_task'].append(app.loop.create_task(worker.do_work(app)))
 
 

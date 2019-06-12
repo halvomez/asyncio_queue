@@ -7,7 +7,7 @@ from aiohttp import web
 logging.basicConfig(level='INFO')
 
 queue = asyncio.Queue()
-active_tasks = []
+active_tasks = {}
 
 
 class TaskController(object):
@@ -37,7 +37,7 @@ class TaskController(object):
     async def get_tasks(request):
         tasks = list(queue._queue)
 
-        for task in active_tasks:
+        for task in active_tasks.values():
             if task is not None:
                 tasks.append(task)
 
@@ -51,15 +51,14 @@ class TaskController(object):
         return web.json_response(tasks)
 
 
-class WorkerController(object):
+class Worker(object):
     def __init__(self, num):
         self.num = num
-        self.logger = logging.getLogger(f'worker-{num + 1}')
+        self.logger = logging.getLogger(f'worker-{num}')
         self.logger.setLevel('INFO')
 
     async def do_work(self, app):
         self.logger.info(' ready to work')
-        active_tasks.append(None)
         while True:
             active_tasks[self.num] = await queue.get()
             self.logger.info(' task in progress')
