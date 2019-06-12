@@ -57,15 +57,15 @@ class WorkerController(object):
         self.logger = logging.getLogger(f'worker-{num + 1}')
         self.logger.setLevel('INFO')
 
-    async def worker(self, loop):
+    async def do_work(self, app):
         self.logger.info(' ready to work')
         active_tasks.append(None)
         while True:
             active_tasks[self.num] = await queue.get()
             self.logger.info(' task in progress')
             active_tasks[self.num]['status'] = 'in_progress'
-            await loop.run_in_executor(None, self.run_progression,
-                                       active_tasks[self.num])
+            await app.loop.run_in_executor(None, self.run_progression,
+                                           active_tasks[self.num])
             active_tasks[self.num] = None
             self.logger.info(' task completed and removed')
             queue.task_done()

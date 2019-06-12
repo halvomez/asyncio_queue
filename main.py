@@ -6,16 +6,26 @@ async def index(request):
     return web.Response(text='Welcome to API!')
 
 
-def main():
-    loop = asyncio.get_event_loop()
-    app = web.Application()
-    TaskController(app)
-    workers = []
+async def start_background_tasks(app):
+    app['workers_task'] = []
 
     for num in range(config.APP['workers_qty']):
         worker = WorkerController(num)
-        workers.append(loop.create_task(worker.worker(loop)))
+        app['workers_task'].append(app.loop.create_task(worker.do_work(app)))
 
+
+async def cleanup_background_tasks(app):
+    for task in app['workers_task']:
+        task.cancel()
+        await task
+
+
+def main():
+    app = web.Application()
+    TaskController(app)
+
+    app.on_startup.append(start_background_tasks)
+    app.on_cleanup.append(cleanup_background_tasks)
     app.router.add_get('/', index)
     web.run_app(app, port=config.APP['port'])
 
